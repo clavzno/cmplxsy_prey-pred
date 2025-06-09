@@ -1,5 +1,13 @@
 # cmplxsy_prey-pred
 
+## PRE REQUISITES (for orcas/seals-shape)
+Once the file is opened in Netlogo
+1. Go to "Tools" on the top
+2. Go to "Turtle Shapes Editor"
+3. Select "Import from Model..."
+4. Open the same file.
+5. In the interface, choose a shape you'd like for seals-shape and orcas-shape.
+
 ## WHAT IS IT?
 
 (a general understanding of what the model is trying to show or explain)
