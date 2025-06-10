@@ -44,7 +44,7 @@ to setup-prey
     set size 1.5
     set shape seals-shape
     set color grey
-    set energy random 60 + 5 ; (random 50) + 5 range
+    set energy random 60 + 5
     setxy random-xcor random-ycor
     set food-eaten 0
   ]
@@ -56,7 +56,7 @@ to setup-predator
     set size 1.5
     set shape orcas-shape
     set color black
-    set energy random 20 + 5 ; (random 30) + 5 range
+    set energy random 20 + 5
     setxy random-xcor random-ycor
     set food-eaten 0
   ]
@@ -121,7 +121,9 @@ to follow-food-block
     ifelse (food-patch != nobody) [
       face food-patch
       fd 1
-      set energy (energy - seal-move-cost) ]
+      set energy (energy - seal-move-cost)
+
+    ]
     [ ; else if no food patch, move around, lose energy
       rt random-float 360
       fd 1
@@ -129,16 +131,19 @@ to follow-food-block
   ] [ ;else if breed = orcas
     let prey min-one-of seals [distance myself]
     ifelse (prey != nobody) [
+      ; 80% of the time, the orcas will fail to catch the prey
       if random-float 1.0 < 0.2 [
-        ; 0.2 or 20% of the time they will fail
+        ; successful
         face prey
         fd 1 ; if true they can move towards the prey, else they miscalculate where it is and lose the prey
-        set energy (energy - (orca-move-cost * 1.5)) ; added a penalty for losing the prey
+        set energy (energy - orca-move-cost) ; added a penalty for losing the prey
       ]
+      ; if they fail...
       rt random-float 90 - 45 ; ±45 degrees of directional error
       fd 1
-      set energy (energy - orca-move-cost)
-    ] [ ; else if no prey, move around, lose energy
+      set energy (energy - orca-move-cost * 1.5)
+    ] [
+      ; else if no prey, move around, lose energy
       rt random-float 360
       fd 1
       set energy (energy - orca-move-cost)
@@ -637,7 +642,7 @@ PENS
 SLIDER
 8
 344
-180
+247
 377
 seal-move-cost
 seal-move-cost
@@ -646,13 +651,13 @@ seal-move-cost
 3.0
 1
 1
-NIL
+energy points
 HORIZONTAL
 
 SLIDER
 308
 347
-480
+557
 380
 orca-move-cost
 orca-move-cost
@@ -661,7 +666,7 @@ orca-move-cost
 5.0
 1
 1
-NIL
+energy points
 HORIZONTAL
 
 @#$#@#$#@
@@ -679,28 +684,35 @@ Once the file is opened in Netlogo
 
 (a general understanding of what the model is trying to show or explain)
 
-This model is a simulation of a simple predator-prey ecosystem. Our group has modeled orcas vs seals in an ocean.
+This model simulates a basic predator-prey ecosystem featuring orcas (predators) and seals (prey) in an ocean environment. It aims to illustrate the dynamics of energy consumption, movement, hunting behavior, and population balance within a simplified food chain. Seals hunt fish (patches) to survive, while orcas hunt seals. Both predator and prey must manage their energy efficiently or risk death, leading to emergent ecological patterns over time.
 
 ## HOW IT WORKS
 
 (what rules the agents use to create the overall behavior of the model)
 
 Two different kinds of agents, orcas and seals, wander around the environment. Each step requires energy by each agent. 
-- Orcas are bigger animals, so they need less energy to move around. They have a base energy of random 30 + 5
-- Seals are smaller animals, so they need more energy to move around. They have a base energy of random 50 + 5
+- Orcas are bigger animals, so they need less energy to move around. They have a base energy of random 20 + 5
+- Seals are smaller animals, so they need more energy to move around. They have a base energy of random 60 + 5
 
 All agents move towards their food source. In this case, orcas try to "find" seals, and seals try to "find" silverfish/fish. 
 - This can be toggled off using "follow-food"
 
 Silverfish are represented as grey patches. Both seals and orcas must eat food in order to replenish energy.
-- If a seal eats a fish patch, they gain a certain percentage, handled by seals-food-gain (function is eat-fish)
-- If an orca eats a seal, they gain a certain percentage, handled by orcas-food-gain (function is eat-seal)
+- If a seal eats a fish patch, they gain a set amount of energy points, handled by seals-food-gain.
+- If an orca eats a seal, they gain a certain percentage of the seal’s energy, handled by orcas-food-gain (function is eat-seal)
 
 Every few ticks, the amount of "food" patches replenish.
 - handled by "spawn-more-food" 
 
 When orcas or seals run out of energy, they die.
 - handled by "die-if-no-energy" 
+
+### Nerfing Orcas
+In the initial model, from the start, the number of orcas would be at max and consistently stay at that number. The following actions have been taken to limit orcas from being overpowered:
+If follow-food? is on, there is a 20% chance that orcas will successfully “catch” the prey. 
+If they fail, the cost is 1.5x more than the base orca-move-cost.
+Orca reproduction contains a threshold, which is the amount of energy needed to reproduce in the first place. If the orca passes this test, then an amount of energy double of reproduction-cost (a base value for all agents) is taken from their energy.
+Eating seals have an energy-gain-cap of 1500, which is the most amount of energy an orca can gain from eating a seal.
 
 ## HOW TO USE IT
 
@@ -720,8 +732,30 @@ GLOBAL PARAMS:
 - seals-food-gain: Agents gain a certain amount of energy points upon eating a food patch. This dictates how many points they get.
 - max-seals: Dictates the max number of seals at a time. If the amount of seals is below this threshold, then reproduction is allowed. Each reproduction takes a certain amount of energy.
 - initial-number-orcas: Dictates the initial number (not percentage) of orcas to be spawned upon setup)
-- orcas-food-gain: Agents gain a certain amount of energy points upon eating a food patch. This dictates how many points they get.
+- orcas-food-gain: Orcas gain a percentage of the target seal’s energy. This dictates how many percent of the seal’s energy they get.
 - max-orcas: Dictates the max number of orcas at a time. If the amount of orcas is below this threshold, then reproduction is allowed. Each reproduction takes a certain amount of energy.
+- seals-shape and orcas-shape: Can be changed for easier viewing.
+
+Recommended Defaults:
+Population Control
+- reproduction-cost: 10 energy points
+- initial-number-food: 100 food patches
+- food-respawn-time: 5 ticks
+- max-food: 40% of space
+- follow-food?: true/on
+- enable-stop-at-500?: false/off
+
+Prey Settings:
+- initial-number-seals: 100 seals
+- seals-food-gain: 50 energy points
+- max-seals: 500
+- seal-move-cost: 3 energy points
+
+Predator Settings:
+- initial-number-orcas: 100 orcas
+- orcas-food-gain: 15% of prey
+- max-orcas: 500
+- orca-move-cost: 5 energy points
 
 ## THINGS TO NOTICE
 
